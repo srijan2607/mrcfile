@@ -283,6 +283,20 @@ class MrcObject:
         self._extended_header = extended_header
         self.header.nsymbt = extended_header.nbytes
 
+    def _update_extended_header_size(self) -> None:
+        """Keep the serialized header consistent with the available metadata."""
+        if self.header is not None and self.extended_header is not None:
+            actual_size = self.extended_header.nbytes
+            if self.header.nsymbt != actual_size:
+                warnings.warn(
+                    "Extended header size does not match header.nsymbt. "
+                    f"Updating header.nsymbt from {int(self.header.nsymbt)} "
+                    f"to {actual_size}.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                self.header.nsymbt = actual_size
+
     @property
     def data(self) -> np.ndarray | None:
         """Get the data as a :class:`numpy array <numpy.ndarray>` or :data:`None`."""

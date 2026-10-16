@@ -455,6 +455,23 @@ To replace the data or extended header completely, call the
    array(52, dtype=int32)
    >>> mrc.close()
 
+.. warning::
+
+   **Behaviour change:** Writing or flushing a writable file, or allocating
+   new memory-mapped data, updates ``header.nsymbt`` to match the actual
+   in-memory extended header size. A ``RuntimeWarning`` is issued if the value
+   changes. This also applies when the main header was copied from another
+   file without copying its extended header. Other header fields are not
+   updated by this check.
+
+   This removes an earlier repair path for malformed files such as those in
+   `issue #51 <https://github.com/ccpem/mrcfile/issues/51>`_. Opening a file with
+   ``mrcfile.mmap(..., mode='r+', permissive=True)`` and setting
+   ``header.nsymbt = 0`` no longer preserves that correction on flush when the
+   cached extended header is nonempty: its byte count is restored instead,
+   with a warning. Do not rely on this workflow to repair such files; preserve
+   a backup and correct the malformed on-disk header separately.
+
 Note that setting an extended header does not automatically set or change the
 header's ``exttyp`` field. You should set this yourself to identify the type
 of extended header you are using.
