@@ -5,6 +5,8 @@
 Tests for mrcfile.py
 """
 
+import bz2
+import gzip
 import os
 import shutil
 import sys
@@ -23,6 +25,8 @@ except ImportError:
     from numpy import ComplexWarning  # type: ignore[attr-defined, no-redef]
 
 from mrcfile import utils
+from mrcfile.bzip2mrcfile import Bzip2MrcFile
+from mrcfile.gzipmrcfile import GzipMrcFile
 from mrcfile.mrcfile import MrcFile
 from mrcfile.mrcobject import (
     IMAGE_STACK_SPACEGROUP,
@@ -289,9 +293,25 @@ class MrcFileTest(test_mrcobject.MrcObjectTest):
             assert "file is 8 bytes larger than expected" in str(w[0].message)
 
     def test_exception_raised_if_file_is_too_small_for_reading_extended_header(self):
-        with self.newmrc(self.temp_mrc_name, mode="w+") as mrc:
-            mrc.set_data(np.arange(24, dtype=np.int16).reshape(2, 3, 4))
+        data = np.arange(24, dtype=np.int16).reshape(2, 3, 4)
+        with (
+            self.assertWarnsRegex(
+                RuntimeWarning, "Updating header.nsymbt from 49 to 0"
+            ),
+            self.newmrc(self.temp_mrc_name, mode="w+") as mrc,
+        ):
+            mrc.set_data(data)
             mrc.header.nsymbt = 49
+            header_bytes = mrc.header.tobytes()
+            opener = open
+            if isinstance(mrc, GzipMrcFile):
+                opener = gzip.open
+            elif isinstance(mrc, Bzip2MrcFile):
+                opener = bz2.open
+        # Construct invalid bytes directly: flush now repairs header.nsymbt.
+        with opener(self.temp_mrc_name, "wb") as stream:
+            stream.write(header_bytes)
+            stream.write(data.tobytes())
         expected_error_msg = (
             "Expected 49 bytes in extended header but could only read 48"
         )

@@ -1,6 +1,17 @@
 Change log for mrcfile
 ======================
 
+Unreleased
+----------
+
+* Fix #51: keep the written extended-header length and memory-mapped data
+  offset consistent when a main header is copied without its metadata.
+* Behaviour change: writable flushes and new memory-mapped data allocation
+  reset header.nsymbt to the actual extended-header byte count, issuing a
+  RuntimeWarning when it changes. Directly setting header.nsymbt to zero in
+  a permissively opened memory map no longer preserves the old repair for
+  a malformed file with a nonempty cached extended header.
+
 Version 1.5.4 (2025-01-21)
 --------------------------
 
